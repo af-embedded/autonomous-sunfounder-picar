@@ -1,29 +1,40 @@
 import RPi.GPIO as GPIO
 import math
 
+
 class WheelEncoder:
-	def __init__(self, pin, wheel_diameter_metres, ticks_per_revolution=192):
-		self._ticks_per_revolution = ticks_per_revolution
-		self._wheel_diameter = wheel_diameter_metres
-		self._distance_per_tick = math.pi * self._wheel_diameter / self._ticks_per_revolution
-		
-		self.ticks = 0
-		self.distance = 0.0
-		
-		GPIO.setmode(GPIO.BCM)
-		GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-		GPIO.add_event_detect(pin, GPIO.RISING, callback=_encoder_tick)
-		
-	def _encoder_tick(self):
-		self.ticks += 1
-		self.distance += self._distance_per_tick
-			
-	def get_ticks(self):
-		return self.ticks
-		
-	def clear(self):
-		self.ticks = 0
-		self.distance = 0
-		
-	def get_distance(self):
-		return self.distance
+    def __init__(self, pin, wheel_diameter_metres, ticks_per_revolution=192):
+        """
+        Wheel Encoder sensor.
+        Originally written for DAGU RS030 Hall effect wheel encoder sensor
+
+        :param pin: The Raspberry Pi BCM pin number on which the sensor's pulse
+                pin in connected
+        :param wheel_diameter_metres: Wheel diameter in metres
+        :param ticks_per_revolution: How many pulses the sensor gives in 1 full
+                wheel revolution
+        """
+        self._ticks_per_revolution = ticks_per_revolution
+        self._wheel_diameter = wheel_diameter_metres
+        self._distance_per_tick = math.pi * self._wheel_diameter / self._ticks_per_revolution
+
+        self._ticks = 0
+        self._distance = 0.0
+
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.add_event_detect(pin, GPIO.RISING, callback=self._encoder_tick)
+
+    def _encoder_tick(self, pin):
+        self._ticks += 1
+        self._distance += self._distance_per_tick
+
+    def clear(self):
+        self._ticks = 0
+        self._distance = 0
+
+    def get_ticks(self):
+        return self._ticks
+
+    def get_distance(self):
+        return self._distance
