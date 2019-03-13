@@ -8,6 +8,9 @@ class BezierSplineCreator(object):
     """ A class for creating Bezier splines.
 
     Nice illustration of Bezier curves: https://javascript.info/bezier-curve
+
+    This implementation assumes that the cars position is in (0, 0) and heading i x-direction.
+    The target point is relative to the start position and so is the angle. 
     """
 
     def __init__(self, nbr_of_ctrl_points=4, D1_factor=4, D2_factor=2):
@@ -85,8 +88,8 @@ class BezierSplineCreator(object):
             points (list): List of ndarrays of points on the Bezier spline.
         """
         target_angle_rad = math.radians(target_angle)
-        D1 = target_point[0] / float(self.D1_factor)
-        D2 = target_point[0] / float(self.D2_factor)
+        D1 = max(target_point[0] / float(self.D1_factor), 1.0)
+        D2 = max(target_point[0] / float(self.D2_factor), 1.0)
         P1 = np.array([0., 0.])
         P2 = np.array([D1, 0.])
         P3 = target_point - \
@@ -97,6 +100,17 @@ class BezierSplineCreator(object):
         points = [self.bezier_formula_4P(
             time, P1, P2, P3, P4) for time in time_vector]
         return points
+
+    def check_spline_steering_angle(self, x_values, y_values):
+
+        dx = np.diff(x_values)
+        dx2 = np.diff(dx)
+        dy = np.diff(y_values)
+        dy2 = np.diff(dy)
+        dydx = dy/dx
+        dy2dx2 = dy2/dx2
+
+        return dydx
 
     def plot_example_curves(self):
         """ Example for calculating three splines and plotting them

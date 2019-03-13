@@ -8,7 +8,8 @@ import BezierSplineCreator
 bspline4 = BezierSplineCreator.BezierSplineCreator(nbr_of_ctrl_points=4)
 
 # Set some target points with angles
-target_points = [np.array([4., 2., 45]), 
+target_points = [np.array([0., 4., 90]),
+                 np.array([4., 2., 45]), 
                  np.array([4., 0., -15]), 
                  np.array([4., -2., 45])]
 
@@ -20,6 +21,11 @@ for point in target_points:
     x_values = [point[0] for point in b_spline_points]
     y_values = [point[1] for point in b_spline_points]
 
+    #diff_vec = bspline4.check_spline_steering_angle(x_values, y_values)
+
+    #heh = np.linspace(0.0, point[0], num=len(diff_vec))
+    #plt.plot(heh, diff_vec)
+
     plt.plot(x_values, y_values)
     plt.plot(point[0], point[1], 'go')
     plt.annotate(str(point), xy=(point[0], point[1]), xytext=(
@@ -30,4 +36,5 @@ plt.title('Example of B-splines')
 plt.ylabel('y [m]')
 plt.xlabel('x [m]')
 plt.plot(0.0, 0.0, 'ro')
+plt.gca().set_aspect('equal')
 plt.show()
