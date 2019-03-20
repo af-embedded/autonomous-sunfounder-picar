@@ -3,17 +3,19 @@ import time
 from sensors.IMU import IMU
 
 class IMUCalibration:
-    def __init__(self, IMU):
+    def __init__(self):
         self._readings = []
-        self._IMU = IMU
     
-    def calibrate(self, iterations, sleep_seconds=0):
+    def calibrate(self, imu, iterations, sleep_seconds=0):
         for i in range(iterations):
-            self._IMU.tick()
-            self._readings.append(self._IMU.get_reading())
-            if sleep != 0:
+            imu.tick()
+            self._readings.append(imu.get_reading())
+            if sleep_seconds != 0:
                 time.sleep(sleep_seconds)
         
         means = {}
-        for k in r.keys():
+        for k in self._readings[0].keys():
             means[k] = np.mean([r[k] for r in self._readings])
+
+        imu.set_calibration(means)
+        return means

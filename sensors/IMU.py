@@ -17,6 +17,21 @@ class IMU:
         self._reading = {}
         self._g_force = 9.81
         self._deg_to_rad = math.pi / 180.0
+        self._calibration = {
+            'ax': 0.0,
+            'ay': 0.0,
+            'az': 0.0,
+            'gx': 0.0,
+            'gy': 0.0,
+            'gz': 0.0,
+            'mx': 0.0,
+            'my': 0.0,
+            'mz': 0.0,
+            'temp': 0.0
+        }
+        
+    def set_calibration(self, calibration):
+        self._calibration = calibration
         
     def tick(self):
         accel = self._mpu9250.readAccel()
@@ -31,12 +46,12 @@ class IMU:
         gyro = self._shuffle(gyro, self._gyro_shuffle)
         mag = self._shuffle(mag, self._magnet_shuffle)
         self._reading = {
-            'ax': accel['x'],
-            'ay': accel['y'],
-            'az': accel['z'],
-            'gx': gyro['x'],
-            'gy': gyro['y'],
-            'gz': gyro['z'],
+            'ax': accel['x'] - self._calibration['ax'],
+            'ay': accel['y'] - self._calibration['ay'],
+            'az': accel['z'] - self._calibration['az'],
+            'gx': gyro['x'] - self._calibration['gx'],
+            'gy': gyro['y'] - self._calibration['gy'],
+            'gz': gyro['z'] - self._calibration['gz'],
             'mx': mag['x'],
             'my': mag['y'],
             'mz': mag['z'],
