@@ -15,16 +15,16 @@ import time
 from SunFounder_TB6612 import TB6612
 
 def main():
-	print "********************************************"
-	print "*                                          *"
-	print "*           SunFounder TB6612              *"
-	print "*                                          *"
-	print "*          Connect MA to BCM17             *"
-	print "*          Connect MB to BCM18             *"
-	print "*         Connect PWMA to BCM27            *"
-	print "*         Connect PWMB to BCM12            *"
-	print "*                                          *"
-	print "********************************************"
+	print("********************************************")
+	print("*                                          *")
+	print("*           SunFounder TB6612              *")
+	print("*                                          *")
+	print("*          Connect MA to BCM17             *")
+	print("*          Connect MB to BCM18             *")
+	print("*         Connect PWMA to BCM27            *")
+	print("*         Connect PWMB to BCM12            *")
+	print("*                                          *")
+	print("********************************************")
 	motorA = TB6612.Motor(17, 27)
 	motorB = TB6612.Motor(18, 22)
 	motorA.set_debug(True)
