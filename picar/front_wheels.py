@@ -39,6 +39,11 @@ class Front_Wheels(object):
 		if self._DEBUG:
 			print(self._DEBUG_INFO, 'left angle: %s, straight angle: %s, right angle: %s' % (self._angle["left"], self._angle["straight"], self._angle["right"]))
 
+	def turn_angle(self, angle):
+		if self._DEBUG:
+			print(self._DEBUG_INFO, 'turn angle ' + str(angle))
+		self.wheel.write(angle)
+
 	def turn_left(self):
 		''' Turn the front wheels left '''
 		if self._DEBUG:
