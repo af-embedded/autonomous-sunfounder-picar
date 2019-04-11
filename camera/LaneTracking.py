@@ -1,17 +1,17 @@
 import cv2
 import numpy as np
-
+import math
 
 def make_coordinates(image, line_parameters):
     try:
         slope, intercept = line_parameters
         y1 = image.shape[0]
-        y2 = int(y1*3/5)
+        y2 = int(y1/5)
         x1 = int((y1 - intercept)/slope)
         x2 = int((y2 - intercept)/slope)
         return np.array([x1, y1, x2, y2])
     except:
-        return np.array([None, None, None, None])
+        return None
 
 def levels_transform(gray_image):
     # make a transformation to flatten the image colors except for the brightest pixels
@@ -20,28 +20,43 @@ def levels_transform(gray_image):
 def average_slope_intercept(image, lines):
     left_fit = []
     right_fit = []
-    for line in lines:
-        x1, y1, x2, y2 = line.reshape(4)
-        parameters = np.polyfit((x1, x2), (y1, y2), 1)
-        slope = parameters[0]
-        intercept = parameters[1]
-        if slope < 0:
-            left_fit.append((slope, intercept))
-        else:
-            right_fit.append((slope, intercept))
 
-    left_fit_average = np.average(left_fit, axis=0)
-    right_fit_average = np.average(right_fit, axis=0)
-    left_line = make_coordinates(image, left_fit_average)
-    right_line = make_coordinates(image, right_fit_average)
+    try:
+        for line in lines:
+            x1, y1, x2, y2 = line.reshape(4)
+            parameters = np.polyfit((x1, x2), (y1, y2), 1)
+            slope = parameters[0]
+            intercept = parameters[1]
+            if x1 < image.shape[1]/2 and x2 < image.shape[1]/2:
+                left_fit.append((slope, intercept))
+            elif x1 > image.shape[1]/2 and x2 > image.shape[1]/2:
+                right_fit.append((slope, intercept))
 
-    output = []
-    if all(left_line):
-        output.append(left_line)
-    if all(right_line):
-        output.append(right_line)
+        left_fit_average = np.average(left_fit, axis=0)
+        right_fit_average = np.average(right_fit, axis=0)
+        left_line = make_coordinates(image, left_fit_average)
+        right_line = make_coordinates(image, right_fit_average)
+    except:
+        print('no lines')
+        left_line = None
+        right_line = None
 
-    return np.array(output)
+    averaged_lines = []
+    hasLeftLine = type(left_line) == np.ndarray or left_line != None
+    hasRightLine = type(right_line) == np.ndarray or right_line != None
+    if hasLeftLine:
+        averaged_lines.append(left_line)
+    if hasRightLine:
+        averaged_lines.append(right_line)
+
+    # average the left and right lanes
+    if hasLeftLine and hasRightLine:
+        averaged_line = np.average(averaged_lines, axis=0).astype('int')
+    else:
+        print('no lines found')
+        averaged_line = None
+
+    return averaged_lines, averaged_line
 
 def region_of_interest(image, horizon):
     height = image.shape[0]
@@ -76,7 +91,15 @@ def firstNum(name):
     num = int(name[:-21])
     return num
 
-def process_one_frame(image, low_light_gradient_threshold, high_light_gradient_threshold, horizon, threshold_intersection, minLineLength, maxLineGap):
+def process_one_frame(image):
+    ### Tuning parameters
+    low_light_gradient_threshold = 100
+    high_light_gradient_threshold = 150
+    horizon = 150
+    threshold_intersection = 5
+    minLineLength = 50
+    maxLineGap = 40
+
     lane_image = np.copy(image)
 
     # convert to gray scale
@@ -98,45 +121,48 @@ def process_one_frame(image, low_light_gradient_threshold, high_light_gradient_t
     lines = cv2.HoughLinesP(im_crop, 2, np.pi / 180, threshold_intersection, np.array([]), minLineLength=minLineLength,
                             maxLineGap=maxLineGap)
 
-    try:
-        # averaged_lines = average_slope_intercept(lane_image, lines)
-        line_image = display_lines(lane_image, lines)
-        # averaged_line_image = display_lines(line_image, averaged_lines, color=(255, 0, 255))
+    averaged_lines, averaged_line = average_slope_intercept(lane_image, lines)
+    line_image = display_lines(lane_image, lines)
+    averaged_lines_image = display_lines(line_image, averaged_lines, color=(255, 0, 255))
+    hasAveragedLine = type(averaged_line) == np.ndarray or averaged_line != None
+    if hasAveragedLine:
+        averaged_line_image = display_lines(line_image, [averaged_line], color=(255, 255, 0))
 
-        # Overlay the images
-        combo_image2 = cv2.addWeighted(lane_image, 0.8, line_image, 1, 1)
-        # combo_image2 = cv2.addWeighted(combo_image1, 0.8, averaged_line_image, 1, 1)
-    except:
-        combo_image2 = lane_image
+    # Overlay the images
+    combo_image1 = cv2.addWeighted(lane_image, 0.8, line_image, 1, 1)
+    combo_image2 = cv2.addWeighted(combo_image1, 0.8, averaged_lines_image, 1, 1)
+    if hasAveragedLine:
+        combo_image2 = cv2.addWeighted(combo_image2, 0.8, averaged_line_image, 1, 1)
 
-    return combo_image2, im_crop
+    return combo_image2, im_crop, averaged_lines, averaged_line
 
+def convert_theta_r_to_m_b(t, r):
+    m = -math.cos(t) / math.sin(t)
+    b = r / math.sin(t)
+    return m, b
 
-### Get device
-device = cv2.VideoCapture(0)
+if __name__ == '__main__':
+    ### Get device
+    device = cv2.VideoCapture(0)
 
-### Tuning parameters
-low_light_gradient_threshold = 100
-high_light_gradient_threshold = 150
-horizon = 115
-threshold_intersection = 5
-minLineLength = 50
-maxLineGap = 40
+    while True:
+        ret, image = device.read()
 
-while True:
-    print('start')
-    ret, image = device.read()
-
-    lane_image = np.copy(image)
+        lane_image = np.copy(image)
 
 
-    output_image, canny_image = process_one_frame(image, low_light_gradient_threshold, high_light_gradient_threshold,
-                                                  horizon, threshold_intersection, minLineLength, maxLineGap)
+        output_image, canny_image, averaged_lines, averaged_line = process_one_frame(image)
 
-    # show image
-    cv2.imshow('result', output_image)
-    if cv2.waitKey(100) == 'q':
-        break
+        try:
+            x1, y1, x2, y2 = averaged_line
+            print((y2-y1)/(x2-x1))
+        except:
+            print('no averaged line')
 
-device.release()
-cv2.destroyAllWindows()
+        # show image
+        cv2.imshow('result', output_image)
+        if cv2.waitKey(100) == 'q':
+            break
+
+    device.release()
+    cv2.destroyAllWindows()
