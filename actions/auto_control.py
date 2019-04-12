@@ -4,6 +4,7 @@ from PyQt5.QtGui import QImage
 import cv2
 import numpy as np
 import requests
+import math
 
 # picar server info
 HOST      = '192.168.2.2'
@@ -151,9 +152,14 @@ while True:
 queryImage = QueryImage(HOST)
 
 # actuate rear wheels
-run_speed(25)
+run_speed(19)
 run_action('forward')
 
+# Define the codec and create VideoWriter object
+# fourcc = cv2.VideoWriter_fourcc(*'XVID')
+# out = cv2.VideoWriter('output.avi',fourcc, 20.0, (640,480))
+
+# Get images and calculate steering angle
 while True:
 
     # Get image from camera
@@ -170,60 +176,69 @@ while True:
     # make copy of raw image
     lane_image = np.copy(image)
 
+    # write to video writer
+    # out.write(lane_image)
+
     output_image, canny_image, averaged_lines, averaged_line = process_one_frame(image)
 
     angle = 0
     angle_max = 45
     x_int_mid_min = 50
-    m_max_actuate = 15
-    x_int_max_actuate = 100
+    image_mid_offset = 100
+    x_int_max_actuate = 200
+    correction_angle = 5
+    steering_coeff = 0.3
+    slope_angle_bias = -5
+
     try:
         print(averaged_lines)
         x1, y1, x2, y2 = averaged_line
         m = (y2 - y1) / (x2 - x1)
+        m_angle = math.degrees(math.atan(1/m)) + slope_angle_bias # left is positive
         b = y1 - m*x1
-        x_int_mid = (image.shape[1]-b)/m - image.shape[1]/2
-        print('slope', m)
-        print('x-intercept', (image.shape[1]-b)/m)
+        x_int_mid = (image.shape[1]-b)/m - (image.shape[1]/2 + image_mid_offset)
+        print('slope', m, str(m_angle) + 'deg')
         print('x-int from middle', x_int_mid)
 
+        if m_angle > 0:
+            # go right if x-int is too far right
+            if x_int_mid > x_int_max_actuate:
+                print('turn right - x-int too far right')
+                angle = correction_angle
 
-        if m > 0:
-            # go straight if slope is high and x-int is on the right
-            if abs(m) > m_max_actuate and x_int_mid > 0:
-                print('straight')
-                angle = 0
-            # turn left if slope is too low or x-int is too left of the image
+            # turn left
             else:
-                print('turn')
-                angle_slope = 0.1 * (m_max_actuate - abs(m)) * angle_max
-                angle_x_int = 1 * (x_int_mid_min / max(0.01, x_int_mid)) * angle_max
-                angle = max(angle_slope, angle_x_int)
-                # print(angle_slope, angle_x_int)
-        elif m < 0:
-            # go straight if slope is high and x-int is on the right
-            if abs(m) > m_max_actuate and x_int_mid < 0:
-                print('straight')
-                angle = 0
-            # turn right if abs(slope) is too low or x-int is too right of the image
+                print('turn left')
+                angle = -steering_coeff*m_angle
+        elif m_angle < 0:
+            # go left if x-int is on the left
+            if x_int_mid < -x_int_max_actuate:
+                print('turn left - x-int too far left')
+                angle = -correction_angle
+            # turn right
             else:
-                print('turn')
-                angle_slope = 0.1 * (m_max_actuate - abs(m)) * angle_max
-                angle_x_int = 1 * (-x_int_mid_min / min(-0.01, x_int_mid)) * angle_max
-                angle = max(angle_slope, angle_x_int)
-                angle = -angle
+                print('turn right')
+                angle = -steering_coeff*m_angle
+        else:
+            print('straight')
+            angle = 0
 
     except:
         print('no averaged line')
+        run_action('stop')
+        break
 
 
     # Actuate, angles in the car go from 45 (full left) to 135 (full right)
+    print(angle)
     angle = angle + 90
     angle = max(min(angle, 135), 45)
-    print(angle)
     run_action('fwturn:' + str(angle))
 
     # show image
     cv2.imshow('result', output_image)
-    if cv2.waitKey(100) == 'q':
+    if cv2.waitKey(20) == 27:
         continue
+
+# out.release()
+cv2.destroyAllWindows()
