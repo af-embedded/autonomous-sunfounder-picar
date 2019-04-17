@@ -1,0 +1,6 @@
+http
+PyQt5
+opencv-python
+numpy
+requests
+matplotlib
