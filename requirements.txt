@@ -1,4 +1,3 @@
-http
 PyQt5
 opencv-python
 numpy
