@@ -3,6 +3,7 @@ import numpy as np
 import math
 from camera.gradientColorThreshold import GradientColorThreshold
 from camera.curveFit import Curves
+from camera.birdseye import BirdsEye
 
 def make_coordinates(image, line_parameters):
     try:
@@ -94,17 +95,10 @@ def firstNum(name):
     num = int(name[:-21])
     return num
 
-def process_one_frame(image):
-    ### Tuning parameters
-    p = {'sat_thresh': 200, 'light_thresh': 200, 'light_thresh_agr': 253,
-         'grad_thresh': (0, 0.08), 'mag_thresh': 120, 'x_thresh': 110}
-    gradientColorThreshold = GradientColorThreshold(p)
-
-
-    lane_image = np.copy(image)
+def process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter):
 
     # Bird View undistort
-    # im_undistort = birdsEye.undistort(lane_image)
+    im_skyview = birdsEye.sky_view(lane_image)
 
     ### Gradient and Color
     # - this does 2 things, color mask and sobel(gradient) mask
@@ -112,29 +106,57 @@ def process_one_frame(image):
     # sobel mask masks the magnitude of the gradient, the x component of the gradient, and the angle of the gradient
 
     # color filter
-    im_blur = cv2.GaussianBlur(lane_image, (7, 7), 0)
+    im_blur = cv2.GaussianBlur(im_skyview, (7, 7), 0)
     gradientColorThreshold.apply_hls(im_blur)
-    im_color = gradientColorThreshold.apply_color_mask()
+    b_color = gradientColorThreshold.apply_color_mask()
 
     # sobel filter
-    im_gray = cv2.cvtColor(lane_image, cv2.COLOR_RGB2GRAY)
+    im_gray = cv2.cvtColor(im_skyview, cv2.COLOR_RGB2GRAY)
     im_blur = cv2.GaussianBlur(im_gray, (17, 17), 0)
     im_levelled = levels_transform(im_blur)
     gradientColorThreshold.apply_l(im_levelled)
-    im_sobel = gradientColorThreshold.apply_sobel_mask()
+    b_sobel = gradientColorThreshold.apply_sobel_mask()
 
-    im_filtered = cv2.bitwise_or(im_sobel, im_color) * 255
+    b_filtered = cv2.bitwise_or(b_sobel, b_color)
 
     ### Curve fit
-    curves = Curves(number_of_windows=9, margin=100, minimum_pixels=50,
-                    ym_per_pix=30 / 720, xm_per_pix=3.7 / 700, poly_deg=3)
+    # result = curveFitter.fit(b_filtered)
+
+    return b_filtered*255, b_color*255, b_sobel*255, im_skyview
 
 def convert_theta_r_to_m_b(t, r):
     m = -math.cos(t) / math.sin(t)
     b = r / math.sin(t)
     return m, b
 
+def setupToolClasses():
+
+    ### BirdsEye
+    source_points = [(25, 310), (251, 75), (608, 287), (379, 74)]
+    destination_points = [(250, 450), (250, 100), (350, 450), (350, 100)]
+
+    # loading camera calibration parameters
+    camera_calibration_parameters = np.load('camera\\camera_calibration_parameters.npz')
+    camera_calibration_matrix = camera_calibration_parameters['camera_matrix']
+    distortion_coefficient = camera_calibration_parameters['distortion_coefficient']
+    birdsEye = BirdsEye(source_points, destination_points,
+                        camera_calibration_matrix, distortion_coefficient)
+
+    ### GradientColorThreshold
+    p = {'sat_thresh': 80, 'light_thresh': 200, 'light_thresh_agr': 245,
+         'grad_thresh': (0, 0.8), 'mag_thresh': 120, 'x_thresh': 100}
+    gradientColorThreshold = GradientColorThreshold(p)
+
+    ### Curves
+    curveFitter = Curves(number_of_windows=9, margin=100, minimum_pixels=50,
+                    ym_per_pix=30 / 720, xm_per_pix=3.7 / 700, poly_deg=3)
+
+    return birdsEye, gradientColorThreshold, curveFitter
+
 if __name__ == '__main__':
+    ### Get tools
+    birdsEye, gradientColorThreshold, curveFitter = setupToolClasses()
+
     ### Get device
     device = cv2.VideoCapture(0)
 
@@ -143,14 +165,7 @@ if __name__ == '__main__':
 
         lane_image = np.copy(image)
 
-        # output_image, canny_image, averaged_lines, averaged_line = process_one_frame(image)
-        output_image = process_one_frame(image)
-
-        # try:
-        #     x1, y1, x2, y2 = averaged_line
-        #     print((y2-y1)/(x2-x1))
-        # except:
-        #     print('no averaged line')
+        output_image = process_one_frame(image, birdsEye, gradientColorThreshold, curveFitter)
 
         # show image
         cv2.imshow('result', output_image)
