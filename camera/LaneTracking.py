@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 import math
-from .gradientColorThreshold import GradientColorThreshold
+from camera.gradientColorThreshold import GradientColorThreshold
+from camera.curveFit import Curves
 
 def make_coordinates(image, line_parameters):
     try:
@@ -105,7 +106,7 @@ def process_one_frame(image):
     # Bird View undistort
     # im_undistort = birdsEye.undistort(lane_image)
 
-    # Gradient and Color
+    ### Gradient and Color
     # - this does 2 things, color mask and sobel(gradient) mask
     # color mask masks the saturation and light values of the color
     # sobel mask masks the magnitude of the gradient, the x component of the gradient, and the angle of the gradient
@@ -122,37 +123,11 @@ def process_one_frame(image):
     gradientColorThreshold.apply_l(im_levelled)
     im_sobel = gradientColorThreshold.apply_sobel_mask()
 
-    im_filtered = cv2.bitwise_or(im_sobel, im_color)
+    im_filtered = cv2.bitwise_or(im_sobel, im_color) * 255
 
-    return 255 * im_filtered
-
-
-
-
-    # # canny function takes the derivative to calculate the gradient
-    # im_canny = cv2.Canny(im_levelled, low_light_gradient_threshold, high_light_gradient_threshold)
-    #
-    # # crop
-    # im_crop = region_of_interest(im_canny, horizon)
-    #
-    # # Hough space best fit line
-    # lines = cv2.HoughLinesP(im_crop, 2, np.pi / 180, threshold_intersection, np.array([]), minLineLength=minLineLength,
-    #                         maxLineGap=maxLineGap)
-    #
-    # averaged_lines, averaged_line = average_slope_intercept(lane_image, lines)
-    # line_image = display_lines(lane_image, lines)
-    # averaged_lines_image = display_lines(line_image, averaged_lines, color=(255, 0, 255))
-    # hasAveragedLine = type(averaged_line) == np.ndarray or averaged_line != None
-    # if hasAveragedLine:
-    #     averaged_line_image = display_lines(line_image, [averaged_line], color=(255, 255, 0))
-    #
-    # # Overlay the images
-    # combo_image1 = cv2.addWeighted(lane_image, 0.8, line_image, 1, 1)
-    # combo_image2 = cv2.addWeighted(combo_image1, 0.8, averaged_lines_image, 1, 1)
-    # if hasAveragedLine:
-    #     combo_image2 = cv2.addWeighted(combo_image2, 0.8, averaged_line_image, 1, 1)
-
-    # return combo_image2, im_crop, averaged_lines, averaged_line
+    ### Curve fit
+    curves = Curves(number_of_windows=9, margin=100, minimum_pixels=50,
+                    ym_per_pix=30 / 720, xm_per_pix=3.7 / 700, poly_deg=3)
 
 def convert_theta_r_to_m_b(t, r):
     m = -math.cos(t) / math.sin(t)
