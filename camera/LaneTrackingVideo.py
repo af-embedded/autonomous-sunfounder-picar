@@ -1,9 +1,8 @@
 import cv2
 import numpy as np
 import os
-from camera.LaneTracking import process_one_frame
-import matplotlib.pyplot as plt
-import math
+from camera.LaneTracking import process_one_frame, setupToolClasses
+
 
 # load video
 filename = 'video_2019_04_16_11_12_17p869919.avi'
@@ -12,6 +11,10 @@ video_path = os.path.join(this_file_path, 'test_videos', filename)
 vidcap = cv2.VideoCapture(video_path)
 
 timestep = 100 # ms
+
+
+### Get tools
+birdsEye, gradientColorThreshold, curveFitter = setupToolClasses()
 
 frame_counter = 0
 while True:
@@ -23,10 +26,13 @@ while True:
 
     lane_image = np.copy(image)
 
-    # output_image, canny_image, averaged_lines, averaged_line = process_one_frame(image)
-    output_image = process_one_frame(image)
+    binary, color, sobel, skyview = process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter)
 
-    # show image
-    cv2.imshow('result', output_image)
+    # Show image
+
+    cv2.imshow('result', skyview)
+    cv2.imshow('binary', binary)
+    cv2.imshow('color', color)
+    cv2.imshow('sobel', sobel)
     if cv2.waitKey(timestep) == 'q':
         continue
