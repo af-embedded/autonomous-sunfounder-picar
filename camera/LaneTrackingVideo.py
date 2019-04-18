@@ -28,10 +28,10 @@ while True:
     binary, color, sobel, skyview = process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter)
 
     # Show image
-
     cv2.imshow('result', skyview)
     cv2.imshow('binary', binary)
     cv2.imshow('color', color)
     cv2.imshow('sobel', sobel)
+
     if cv2.waitKey(timestep) == 'q':
         continue

@@ -121,9 +121,9 @@ def process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter)
     b_filtered = cv2.bitwise_or(b_sobel, b_color)
 
     ### Curve fit
-    result = curveFitter.fit(b_filtered)
+    curve_fit_result = curveFitter.fit(b_filtered)
 
-    return b_filtered*255, b_color*255, b_sobel*255, im_skyview
+    return b_filtered*255, b_color*255, b_sobel*255, im_skyview, curve_fit_result
 
 def convert_theta_r_to_m_b(t, r):
     m = -math.cos(t) / math.sin(t)
@@ -164,8 +164,10 @@ def setupToolClasses():
     gradientColorThreshold = GradientColorThreshold(p)
 
     ### Curves
-    curveFitter = Curves(number_of_windows=9, margin=100, minimum_pixels=50,
-                    ym_per_pix=30 / 720, xm_per_pix=3.7 / 700, poly_deg=3)
+    xm_per_pix = d/100/d_dest
+    ym_per_pix = w/100/w_dest
+    curveFitter = Curves(number_of_windows=9, margin=20, minimum_pixels=15,
+                    ym_per_pix=ym_per_pix, xm_per_pix=xm_per_pix, poly_deg=3)
 
     return birdsEye, gradientColorThreshold, curveFitter
 
