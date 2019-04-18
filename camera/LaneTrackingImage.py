@@ -4,17 +4,15 @@ import os
 from camera.LaneTracking import process_one_frame, setupToolClasses
 
 # load image
-# this_file_path = os.path.dirname(os.path.abspath(__file__))
-# folder = os.path.join(this_file_path, 'SkyviewImages')
-# image_files = os.listdir(folder)
-image_files = ['C:\\Work\\autonomous-sunfounder-picar\\camera\\test_image.jpg']
+folder = os.path.join('C:\\Users\\A551221\\OneDrive - AF', 'track_images')
+image_files = os.listdir(folder)
+full_filepath = [os.path.join(folder, file) for file in image_files]
 
 ### Get tools
 birdsEye, gradientColorThreshold, curveFitter = setupToolClasses()
 
-for filename in image_files:
-    # image = cv2.imread(os.path.join(folder, filename))
-    image = cv2.imread(filename)
+for fullpath in full_filepath:
+    image = cv2.imread(fullpath)
 
     lane_image = np.copy(image)
 
@@ -26,5 +24,5 @@ for filename in image_files:
     cv2.imshow('binary', binary)
     cv2.imshow('color', color)
     cv2.imshow('sobel', sobel)
-    if cv2.waitKey(100000) == 'q':
+    if cv2.waitKey(100) == 'q':
         continue

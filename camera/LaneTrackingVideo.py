@@ -6,8 +6,7 @@ from camera.LaneTracking import process_one_frame, setupToolClasses
 
 # load video
 filename = 'video_2019_04_16_11_12_17p869919.avi'
-this_file_path = os.path.dirname(os.path.abspath(__file__))
-video_path = os.path.join(this_file_path, 'test_videos', filename)
+video_path = os.path.join('C:\\Users\\A551221\\OneDrive - AF', 'test_videos', filename)
 vidcap = cv2.VideoCapture(video_path)
 
 timestep = 100 # ms
