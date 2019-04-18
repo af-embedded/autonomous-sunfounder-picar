@@ -98,7 +98,7 @@ def firstNum(name):
 
 def process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter):
 
-    # Bird View undistort
+    ### Bird View undistort
     im_skyview = birdsEye.sky_view(lane_image)
 
     ### Gradient and Color
@@ -121,7 +121,7 @@ def process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter)
     b_filtered = cv2.bitwise_or(b_sobel, b_color)
 
     ### Curve fit
-    # result = curveFitter.fit(b_filtered)
+    result = curveFitter.fit(b_filtered)
 
     return b_filtered*255, b_color*255, b_sobel*255, im_skyview
 
@@ -133,8 +133,22 @@ def convert_theta_r_to_m_b(t, r):
 def setupToolClasses():
 
     ### BirdsEye
+    d = 67.2 # cm
+    w = 13.8 #cm
+    d_dest = 350 #px
+    w_dest = w/d*d_dest #px
+
+    mid_px = 300
+    max_y_px = 450
+
+    # lower left, upper left, lower right, upper right
     source_points = [(25, 310), (251, 75), (608, 287), (379, 74)]
-    destination_points = [(250, 450), (250, 100), (350, 450), (350, 100)]
+    destination_points = [
+        (int(mid_px-w_dest/2), int(max_y_px)),
+        (int(mid_px-w_dest/2), int(max_y_px-d_dest)),
+        (int(mid_px+w_dest/2), int(max_y_px)),
+        (int(mid_px+w_dest/2), int(max_y_px-d_dest))
+    ]
 
     # loading camera calibration parameters
     this_file_dir = os.path.dirname(__file__)
