@@ -4,6 +4,7 @@ import math
 from camera.gradientColorThreshold import GradientColorThreshold
 from camera.curveFit import Curves
 from camera.birdseye import BirdsEye
+import os
 
 def make_coordinates(image, line_parameters):
     try:
@@ -136,7 +137,8 @@ def setupToolClasses():
     destination_points = [(250, 450), (250, 100), (350, 450), (350, 100)]
 
     # loading camera calibration parameters
-    camera_calibration_parameters = np.load('camera\\camera_calibration_parameters.npz')
+    this_file_dir = os.path.dirname(__file__)
+    camera_calibration_parameters = np.load(os.path.join(this_file_dir, 'camera_calibration_parameters.npz'))
     camera_calibration_matrix = camera_calibration_parameters['camera_matrix']
     distortion_coefficient = camera_calibration_parameters['distortion_coefficient']
     birdsEye = BirdsEye(source_points, destination_points,
