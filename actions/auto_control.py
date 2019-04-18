@@ -151,56 +151,65 @@ while True:
 queryImage = QueryImage(HOST)
 
 # actuate rear wheels
-# run_speed(20)
-# run_action('forward')
+run_speed(25)
+run_action('forward')
 
-# Define the codec and create VideoWriter object
-# fourcc = cv2.VideoWriter_fourcc(*'XVID')
-# out = cv2.VideoWriter('output.avi',fourcc, 20.0, (640,480))
 
 ######### history of m_angle and x_int_mid
-num_history = 10
 timestep = 20 # ms
-history = [[0, 0] for x in range(num_history)]
-cum_slope_error = 0 # integrate for I control
-cum_x_int_mid_error = 0 # integrate for I control
+look_ahead_dist = 0.40 # m
+cum_center_error = 0
+camera_offset = 3.62/100 #m
 
 ### Get tools
 birdsEye, gradientColorThreshold, curveFitter = setupToolClasses()
 
 # Get images and calculate steering angle
-while True:
+try:
+    while True:
+        # Get image from camera
+        response = queryImage.queryImage()
+        if not response:
+            print('no response from querying images')
+            continue
 
-    # Get image from camera
-    response = queryImage.queryImage()
-    if not response:
-        print('no response from querying images')
-        continue
-
-    qImage = QImage()
-    qImage.loadFromData(response)
-    image = QImageToMat(qImage)
-
-
-    # make copy of raw image
-    lane_image = np.copy(image)
-
-    # write to video writer
-    # out.write(lane_image)
-
-    binary, color, sobel, skyview = process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter)
+        qImage = QImage()
+        qImage.loadFromData(response)
+        image = QImageToMat(qImage)
 
 
+        # make copy of raw image
+        lane_image = np.copy(image)
+
+        binary, color, sobel, skyview, curve_fit_result = process_one_frame(lane_image, birdsEye, gradientColorThreshold,
+                                                                            curveFitter)
+
+        # Calc steering based on look ahead distance
+        x = look_ahead_dist
+        fl = curve_fit_result['real_left_best_fit_curve']
+        fr = curve_fit_result['real_right_best_fit_curve']
+        yl = fl[0] * x ** 3 + fl[1] * x ** 2 + fl[2] * x + fl[3]
+        yr = fr[0] * x ** 3 + fr[1] * x ** 2 + fr[2] * x + fr[3]
+        y_mid_ahead = (yl + yr) / 2 - curveFitter.w / 2 * curveFitter.kx + camera_offset  # wrt the car's center
+
+        cum_center_error += y_mid_ahead*timestep/1000
+        k = 400
+        steer_from_mid = k*cum_center_error
+        print(y_mid_ahead, cum_center_error)
+        run_action('fwturn:' + str(int(steer_from_mid+90)))
+
+        # Show image
+        cv2.imshow('result', skyview)
+        cv2.imshow('binary', binary)
+        # cv2.imshow('color', color)
+        # cv2.imshow('sobel', sobel)
+        cv2.imshow('curve fit result', curve_fit_result['image'])
 
 
-    # Show image
-
-    cv2.imshow('result', skyview)
-    cv2.imshow('binary', binary)
-    cv2.imshow('color', color)
-    cv2.imshow('sobel', sobel)
-    if cv2.waitKey(timestep) == 27:
-        continue
-
+        if cv2.waitKey(timestep) == 27:
+            continue
+except:
+    print('error')
 # out.release()
+
 cv2.destroyAllWindows()
