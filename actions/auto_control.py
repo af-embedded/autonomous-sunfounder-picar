@@ -4,7 +4,6 @@ from PyQt5.QtGui import QImage
 import cv2
 import numpy as np
 import requests
-import math
 
 # picar server info
 HOST      = '192.168.2.2'
