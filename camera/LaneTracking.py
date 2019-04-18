@@ -5,6 +5,7 @@ from camera.gradientColorThreshold import GradientColorThreshold
 from camera.curveFit import Curves
 from camera.birdseye import BirdsEye
 import os
+import datetime
 
 def make_coordinates(image, line_parameters):
     try:
@@ -96,7 +97,7 @@ def firstNum(name):
     num = int(name[:-21])
     return num
 
-def process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter):
+def process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter, image_folder_path=''):
 
     ### Bird View undistort
     im_skyview = birdsEye.sky_view(lane_image)
@@ -123,6 +124,13 @@ def process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter)
     ### Curve fit
     curve_fit_result = curveFitter.fit(b_filtered)
 
+    ### Save images if curve fit raises poor binary quality flag
+    poor_quality = curve_fit_result['poor_binary_quality']
+    if poor_quality:
+        filename_tag = str(datetime.datetime.now()).replace('-', '_').replace(' ', '_').replace(':', '_').replace('.', 'p') + '.jpg'
+        cv2.imwrite(os.path.join(image_folder_path, 'image_' + filename_tag), lane_image)
+        cv2.imwrite(os.path.join(image_folder_path, 'image_skyview_' + filename_tag), im_skyview)
+
     return b_filtered*255, b_color*255, b_sobel*255, im_skyview, curve_fit_result
 
 def convert_theta_r_to_m_b(t, r):
@@ -138,7 +146,7 @@ def setupToolClasses():
     d_dest = 350 #px
     w_dest = w/d*d_dest #px
 
-    mid_px = 300
+    mid_px = 640/2
     max_y_px = 450
 
     # lower left, upper left, lower right, upper right
@@ -166,7 +174,7 @@ def setupToolClasses():
     ### Curves
     xm_per_pix = d/100/d_dest
     ym_per_pix = w/100/w_dest
-    curveFitter = Curves(number_of_windows=9, margin=20, minimum_pixels=15,
+    curveFitter = Curves(number_of_windows=9, margin=40, minimum_pixels=15,
                     ym_per_pix=ym_per_pix, xm_per_pix=xm_per_pix, poly_deg=3)
 
     return birdsEye, gradientColorThreshold, curveFitter

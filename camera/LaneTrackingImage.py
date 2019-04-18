@@ -4,8 +4,9 @@ import os
 from camera.LaneTracking import process_one_frame, setupToolClasses
 
 # load image
-folder = os.path.join('C:\\Users\\A551221\\OneDrive - AF', 'track_images')
-image_files = os.listdir(folder)
+# folder = os.path.join('C:\\Users\\horac\\OneDrive - AF', 'poor_performance_images')
+folder = os.path.join('C:\\Users\\horac\\OneDrive - AF', 'track_images')
+# image_files = os.listdir(folder)
 image_files = ['straight_lanes_calibrate.jpg']
 full_filepath = [os.path.join(folder, file) for file in image_files]
 
@@ -40,3 +41,5 @@ for fullpath in full_filepath:
 
     if cv2.waitKey(1000) == 'q':
         continue
+
+cv2.destroyAllWindows()

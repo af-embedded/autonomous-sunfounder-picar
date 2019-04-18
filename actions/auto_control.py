@@ -159,10 +159,9 @@ run_action('forward')
 timestep = 20 # ms
 look_ahead_dist = 0.40 # m
 cum_center_error = 0
-camera_offset = 3.62/100 #m
 
 ### Get tools
-birdsEye, gradientColorThreshold, curveFitter = setupToolClasses()
+birdsEye, gradientColorThreshold, curveFitter = setupToolClasses(camera_offset)
 
 # Get images and calculate steering angle
 try:
@@ -190,7 +189,7 @@ try:
         fr = curve_fit_result['real_right_best_fit_curve']
         yl = fl[0] * x ** 3 + fl[1] * x ** 2 + fl[2] * x + fl[3]
         yr = fr[0] * x ** 3 + fr[1] * x ** 2 + fr[2] * x + fr[3]
-        y_mid_ahead = (yl + yr) / 2 - curveFitter.w / 2 * curveFitter.kx + camera_offset  # wrt the car's center
+        y_mid_ahead = (yl + yr) / 2 - curveFitter.w / 2 * curveFitter.kx  # wrt the car's center
 
         cum_center_error += y_mid_ahead*timestep/1000
         k = 400

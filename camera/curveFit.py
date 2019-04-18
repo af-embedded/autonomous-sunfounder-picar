@@ -86,7 +86,7 @@ class Curves:
         else:
             raise ValueError('unsupported polynomial degree for curveFit class')
 
-        xls, xrs, ys = left_xs.astype(np.uint32), right_xs.astype(np.uint32), ys.astype(np.uint32)
+        xls, xrs, ys = left_xs.astype('int'), right_xs.astype('int'), ys.astype('int')
 
         # draw the lines
         for xl, xr, y in zip(xls, xrs, ys):
@@ -184,6 +184,17 @@ class Curves:
         cv2.putText(self.out_img, 'car is ' + self.vehicle_position_words, bottomLeftCornerOfText, font,
                     fontScale, fontColor, lineType)
 
+        # access the quality of the binary matricies fed
+        y_pixel_range_required = 300
+        poor_binary_quality = False
+        if max(self.left_pixels_y) - min(self.left_pixels_y) < y_pixel_range_required:
+            poor_binary_quality = True
+        if max(self.right_pixels_y) - min(self.right_pixels_y) < y_pixel_range_required:
+            poor_binary_quality = True
+        if np.array_equal(self.left_pixels_y, self.right_pixels_y):
+            poor_binary_quality = True
+
+
         self.result = {
             'image': self.out_img,
             'left_radius': self.left_radius,
@@ -193,7 +204,8 @@ class Curves:
             'pixel_left_best_fit_curve': self.left_fit_curve_pix,
             'pixel_right_best_fit_curve': self.right_fit_curve_pix,
             'vehicle_position': self.vehicle_position,
-            'vehicle_position_words': self.vehicle_position_words
+            'vehicle_position_words': self.vehicle_position_words,
+            'poor_binary_quality': poor_binary_quality
         }
 
         return self.result
