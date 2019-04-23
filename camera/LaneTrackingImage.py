@@ -23,15 +23,6 @@ for fullpath in full_filepath:
 
     binary, color, sobel, skyview, curve_fit_result = process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter)
 
-    # Calc steering based on look ahead distance
-    x = look_ahead_dist
-    fl = curve_fit_result['real_left_best_fit_curve']
-    fr = curve_fit_result['real_right_best_fit_curve']
-    yl = fl[0] * x ** 3 + fl[1] * x ** 2 + fl[2] * x + fl[3]
-    yr = fr[0] * x ** 3 + fr[1] * x ** 2 + fr[2] * x + fr[3]
-    y_mid_ahead = (yl + yr) / 2 - curveFitter.w/2*curveFitter.kx # wrt the car's center
-    print(y_mid_ahead)
-
     # Show image
     cv2.imshow('result', skyview)
     cv2.imshow('binary', binary)

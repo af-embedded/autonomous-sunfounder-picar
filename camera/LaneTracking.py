@@ -175,7 +175,7 @@ def setupToolClasses():
     xm_per_pix = d/100/d_dest
     ym_per_pix = w/100/w_dest
     curveFitter = Curves(number_of_windows=9, margin=40, minimum_pixels=15,
-                    ym_per_pix=ym_per_pix, xm_per_pix=xm_per_pix, poly_deg=3)
+                    ym_per_pix=ym_per_pix, xm_per_pix=xm_per_pix, poly_deg=2)
 
     return birdsEye, gradientColorThreshold, curveFitter
 

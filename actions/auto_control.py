@@ -161,7 +161,7 @@ look_ahead_dist = 0.40 # m
 cum_center_error = 0
 
 ### Get tools
-birdsEye, gradientColorThreshold, curveFitter = setupToolClasses(camera_offset)
+birdsEye, gradientColorThreshold, curveFitter = setupToolClasses()
 
 # Get images and calculate steering angle
 try:
@@ -183,12 +183,14 @@ try:
         binary, color, sobel, skyview, curve_fit_result = process_one_frame(lane_image, birdsEye, gradientColorThreshold,
                                                                             curveFitter)
 
-        # Calc steering based on look ahead distance
+        # Calc steering based on look ahead distance ****** does not take into account of lost lane tracking
         x = look_ahead_dist
         fl = curve_fit_result['real_left_best_fit_curve']
         fr = curve_fit_result['real_right_best_fit_curve']
-        yl = fl[0] * x ** 3 + fl[1] * x ** 2 + fl[2] * x + fl[3]
-        yr = fr[0] * x ** 3 + fr[1] * x ** 2 + fr[2] * x + fr[3]
+        # yl = fl[0] * x ** 3 + fl[1] * x ** 2 + fl[2] * x + fl[3]
+        # yr = fr[0] * x ** 3 + fr[1] * x ** 2 + fr[2] * x + fr[3]
+        yl = fl[0] * x ** 2 + fl[1] * x + fl[2]
+        yr = fr[0] * x ** 2 + fr[1] * x + fr[2]
         y_mid_ahead = (yl + yr) / 2 - curveFitter.w / 2 * curveFitter.kx  # wrt the car's center
 
         cum_center_error += y_mid_ahead*timestep/1000
