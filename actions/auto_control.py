@@ -4,7 +4,9 @@ from PyQt5.QtGui import QImage
 import cv2
 import numpy as np
 import requests
-
+from simple_pid import PID
+import datetime
+import math
 # picar server info
 HOST      = '192.168.2.2'
 PORT 	  = '8000'
@@ -151,66 +153,86 @@ while True:
 queryImage = QueryImage(HOST)
 
 # actuate rear wheels
-run_speed(25)
+velocityPercentage = 30
+run_speed(velocityPercentage)
 run_action('forward')
-
+steering_turn_constant = -2
 
 ######### history of m_angle and x_int_mid
 timestep = 20 # ms
-look_ahead_dist = 0.40 # m
+look_ahead_dist = 0.15  # 0.40 # m
 cum_center_error = 0
 
 ### Get tools
 birdsEye, gradientColorThreshold, curveFitter = setupToolClasses()
+# Get images and calculate steering angless
 
-# Get images and calculate steering angle
-try:
-    while True:
-        # Get image from camera
-        response = queryImage.queryImage()
-        if not response:
-            print('no response from querying images')
-            continue
+while True:
 
-        qImage = QImage()
-        qImage.loadFromData(response)
-        image = QImageToMat(qImage)
-
-
-        # make copy of raw image
-        lane_image = np.copy(image)
-
-        binary, color, sobel, skyview, curve_fit_result = process_one_frame(lane_image, birdsEye, gradientColorThreshold,
-                                                                            curveFitter)
-
-        # Calc steering based on look ahead distance ****** does not take into account of lost lane tracking
-        x = look_ahead_dist
-        fl = curve_fit_result['real_left_best_fit_curve']
-        fr = curve_fit_result['real_right_best_fit_curve']
-        # yl = fl[0] * x ** 3 + fl[1] * x ** 2 + fl[2] * x + fl[3]
-        # yr = fr[0] * x ** 3 + fr[1] * x ** 2 + fr[2] * x + fr[3]
-        yl = fl[0] * x ** 2 + fl[1] * x + fl[2]
-        yr = fr[0] * x ** 2 + fr[1] * x + fr[2]
-        y_mid_ahead = (yl + yr) / 2 - curveFitter.w / 2 * curveFitter.kx  # wrt the car's center
-
-        cum_center_error += y_mid_ahead*timestep/1000
-        k = 400
-        steer_from_mid = k*cum_center_error
-        print(y_mid_ahead, cum_center_error)
-        run_action('fwturn:' + str(int(steer_from_mid+90)))
-
-        # Show image
-        cv2.imshow('result', skyview)
-        cv2.imshow('binary', binary)
-        # cv2.imshow('color', color)
-        # cv2.imshow('sobel', sobel)
-        cv2.imshow('curve fit result', curve_fit_result['image'])
+    # current time
+    t1 = datetime.datetime.now()
+    # Get image from camera
+    response = queryImage.queryImage()
+    if not response:
+        print('no response from querying images')
+        continue
+    qImage = QImage()
+    qImage.loadFromData(response)
+    image = QImageToMat(qImage)
 
 
-        if cv2.waitKey(timestep) == 27:
-            continue
-except:
-    print('error')
+    # make copy of raw image
+    lane_image = np.copy(image)
+
+    binary, color, sobel, skyview, curve_fit_result = process_one_frame(lane_image, birdsEye, gradientColorThreshold,
+                                                                        curveFitter, image_folder_path='C:\\Users\\A550651\\OneDrive - AF\\poor_performance_images')
+
+    # Calc steering based on look ahead distance ****** does not take into account of lost lane tracking
+    x = look_ahead_dist
+    fl = curve_fit_result['real_left_best_fit_curve']
+    fr = curve_fit_result['real_right_best_fit_curve']
+    # yl = fl[0] * x ** 3 + fl[1] * x ** 2 + fl[2] * x + fl[3]
+    # yr = fr[0] * x ** 3 + fr[1] * x ** 2 + fr[2] * x + fr[3]
+    yl = fl[0] * x ** 2 + fl[1] * x + fl[2]
+    yr = fr[0] * x ** 2 + fr[1] * x + fr[2]
+    y_mid_ahead = (yl + yr) / 2 - curveFitter.w / 2 * curveFitter.kx  # wrt the car's center
+
+    t2 = datetime.datetime.now()
+
+    #####
+    if yl != yr :
+        pid = PID(40, 0.5, 0.1, setpoint=0)
+        steering_turn = steering_turn_constant * pid(y_mid_ahead)
+
+        # # for higher velocity
+        # if steering_turn > 1.5 or steering_turn <-1.5:
+        #     run_speed(30)
+        # else:
+        #     run_speed(velocityPercentage)
+
+    print(steering_turn + 90)
+    run_action('fwturn:' + str(int(steering_turn + 90)))
+
+    #####
+    # cum_center_error += y_mid_ahead*timestep/1000
+    # k = 400
+    # steer_from_mid = k*cum_center_error
+    # print(y_mid_ahead, cum_center_error)
+    # run_action('fwturn:' + str(int(steer_from_mid+90)))
+
+    # Show image
+    cv2.imshow('result', skyview)
+    cv2.imshow('binary', binary)
+    # cv2.imshow('color', color)
+    # cv2.imshow('sobel', sobel)
+    cv2.imshow('curve fit result', curve_fit_result['image'])
+    # delta_time = t2 - t1
+    # lapse_time = delta_time.seconds * 1000 + delta_time.microseconds/ 1000 # in mss
+    # print(math.ceil(lapse_time))
+
+    if cv2.waitKey(1) == 27:
+        continue
+
 # out.release()
 
 cv2.destroyAllWindows()
