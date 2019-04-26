@@ -150,7 +150,7 @@ def setupToolClasses():
     max_y_px = 450
 
     # lower left, upper left, lower right, upper right
-    source_points = [(25, 310), (251, 75), (608, 287), (379, 74)]
+    source_points = [(4, 460), (270, 88),  (633, 466), (401, 90)] # [(25, 310), (251, 75), (608, 287), (379, 74)], for old camera setting
     destination_points = [
         (int(mid_px-w_dest/2), int(max_y_px)),
         (int(mid_px-w_dest/2), int(max_y_px-d_dest)),
