@@ -162,6 +162,12 @@ class Curves:
         self.left_pixels_indices = np.concatenate(left_pixels_indices)
         self.right_pixels_indices = np.concatenate(right_pixels_indices)
 
+        if self.left_pixels_indices.size == 0:
+            self.left_pixels_indices = self.right_pixels_indices
+
+        if self.right_pixels_indices.size == 0:
+            self.right_pixels_indices = self.left_pixels_indices
+
         self.left_pixels_x, self.left_pixels_y = self.pixel_locations(self.left_pixels_indices)
         self.right_pixels_x, self.right_pixels_y = self.pixel_locations(self.right_pixels_indices)
 
