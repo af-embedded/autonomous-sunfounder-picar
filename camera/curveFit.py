@@ -65,7 +65,7 @@ class Curves:
         cond2 = (self.all_pixels_y < y_hi)
         cond3 = (self.all_pixels_x >= x_left)
         cond4 = (self.all_pixels_x < x_right)
-        return (cond1 & cond2 & cond3 & cond4 ).nonzero()[0]
+        return (cond1 & cond2 & cond3 & cond4).nonzero()[0]
 
     def pixel_locations(self, indices):
         return self.all_pixels_x[indices], self.all_pixels_y[indices]
@@ -230,6 +230,8 @@ class Curves:
         # if np.array_equal(self.left_pixels_y, self.right_pixels_y):
         #     poor_binary_quality = True
 
+        self.left_pixels_indices = []
+        self.right_pixels_indices = []
 
         self.result = {
             'image': self.out_img,

@@ -34,7 +34,7 @@ class CarConnect:
             return_msg.read(), http response data
         """
         try :
-            http_data = http.client.HTTPConnection(self.host, self.port)
+            http_data = http.client.HTTPConnection(self.host, self.in_port)
             http_data.putrequest('GET', "/?action=snapshot")
             http_data.putheader('Host', self.host)
             http_data.putheader('User-agent', 'python-http.client')
@@ -47,15 +47,15 @@ class CarConnect:
         except:
             return False
 
-    def request(self, url, times=10):
+    def __request__(self, url, times=10):
         for x in range(times):
             try:
-                requests.get(url)
-                return 0
+                r = requests.get(url)
+                return r.status_code == 200
             except:
                 print("Connection error, try again")
         print("Abort")
-        return -1
+        return False
 
     def run_action(self, cmd):
         """Ask server to do sth, use in running mode
@@ -77,7 +77,8 @@ class CarConnect:
         url = 'http://' + self.host + ':' + self.out_port + '/run/?action=' + cmd
         print('url: %s' % url)
         # post request with url
-        self.request(url)
+        if not self.__request__(url):
+            print("Error: run_action send request failed")
 
     def run_speed(self, speed):
         """Ask server to set speed, use in running mode
@@ -90,8 +91,10 @@ class CarConnect:
         """
         # Set set-speed url
         url = 'http://' + self.host + ':'+ self.out_port + '/run/?speed=' + str(speed)
+        print('url: %s' % url)
         # Set speed
-        self.request(url)
+        if not self.__request__(url):
+            print("Error: run_speed request failed")
 
     def connection_ok(self):
         """Check whetcher connection is ok
@@ -109,7 +112,7 @@ class CarConnect:
             none
         """
         cmd = 'connection_test'
-        url = 'http://' + self.host + ':'+ self.outport + '/' + cmd
+        url = 'http://' + self.host + ':'+ self.out_port + '/' + cmd
         print('url: %s' % url)
         # if server find there is 'connection_test' in request url, server will response 'Ok'
         try:
