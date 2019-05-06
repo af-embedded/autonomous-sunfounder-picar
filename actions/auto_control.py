@@ -185,7 +185,7 @@ while True:
     lane_image = np.copy(image)
 
     binary, color, sobel, skyview, curve_fit_result = process_one_frame(lane_image, birdsEye, gradientColorThreshold,
-                                                                        curveFitter, image_folder_path='C:\\Users\\A550651\\OneDrive - AF\\poor_performance_images')
+                                                                        curveFitter)
 
     # Calc steering based on look ahead distance ****** does not take into account of lost lane tracking
     x = look_ahead_dist

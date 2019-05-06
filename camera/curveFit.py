@@ -36,6 +36,10 @@ class Curves:
         mid = np.int(hist.shape[0] / 2)                           # half the width of the previous array
         current_leftx = np.argmax(hist[:mid])           # get the idx with the max value on the left half of hist
         current_rightx = np.argmax(hist[mid:]) + mid    # get the idx with the max value on the right half of hist
+        if hist[current_leftx] == 0:
+            current_leftx = None
+        if hist[current_rightx] == 0:
+            current_rightx = None
         return current_leftx, current_rightx
 
     def next_y(self, w):  # returns the lowest and highest y coordinates for the window
@@ -61,20 +65,27 @@ class Curves:
         cond2 = (self.all_pixels_y < y_hi)
         cond3 = (self.all_pixels_x >= x_left)
         cond4 = (self.all_pixels_x < x_right)
-        return (cond1 & cond2 & cond3 & cond4 ).nonzero()[0]
+        return (cond1 & cond2 & cond3 & cond4).nonzero()[0]
 
     def pixel_locations(self, indices):
         return self.all_pixels_x[indices], self.all_pixels_y[indices]
 
     def plot(self, t=2):
 
-        self.out_img[self.left_pixels_y, self.left_pixels_x] = [255, 0, 255]
-        self.out_img[self.right_pixels_y, self.right_pixels_x] = [0, 255, 255]
+        if self.left_pixels_x is not None and self.left_pixels_y is not None:
+            self.out_img[self.left_pixels_y, self.left_pixels_x] = [255, 0, 255]
+            self.left_fit_curve_pix = np.polyfit(self.left_pixels_y, self.left_pixels_x, self.deg)
+            kl = self.left_fit_curve_pix
+        else:
+            kl = (0, 0, 0)
 
-        self.left_fit_curve_pix = np.polyfit(self.left_pixels_y, self.left_pixels_x, self.deg)
-        self.right_fit_curve_pix = np.polyfit(self.right_pixels_y, self.right_pixels_x, self.deg)
+        if self.right_pixels_x is not None and self.right_pixels_y is not None:
+            self.out_img[self.right_pixels_y, self.right_pixels_x] = [0, 255, 255]
+            self.right_fit_curve_pix = np.polyfit(self.right_pixels_y, self.right_pixels_x, self.deg)
+            kr = self.right_fit_curve_pix
+        else:
+            kr = (0, 0, 0)
 
-        kl, kr = self.left_fit_curve_pix, self.right_fit_curve_pix
         ys = np.linspace(0, self.h - 1, self.h)
 
         if self.deg == 2:
@@ -113,14 +124,29 @@ class Curves:
         mid = self.w / 2
         kl, kr = self.left_fit_curve_pix, self.right_fit_curve_pix
 
-        if self.deg == 2:
-            xl = kl[0] * (y**2) + kl[1]* y + kl[2]
-            xr = kr[0] * (y**2) + kr[1]* y + kr[2]
-        elif self.deg == 3:
-            xl = kl[0]*y**3 + kl[1]*y**2 + kl[2]*y + kl[3]
-            xr = kr[0]*y**3 + kr[1]*y**2 + kr[2]*y + kr[3]
-        else:
-            raise ValueError('unsupported polynomial degree for curveFit class')
+        if kl is None and kr is None:
+            return
+
+        if kl is not None:
+            if self.deg == 2:
+                xl = kl[0] * (y**2) + kl[1]* y + kl[2]
+            elif self.deg == 3:
+                xl = kl[0]*y**3 + kl[1]*y**2 + kl[2]*y + kl[3]
+            else:
+                raise ValueError('unsupported polynomial degree for curveFit class')
+
+        if kr is not None:
+            if self.deg == 2:
+                xr = kr[0] * (y ** 2) + kr[1] * y + kr[2]
+            elif self.deg == 3:
+                xr = kr[0] * y ** 3 + kr[1] * y ** 2 + kr[2] * y + kr[3]
+            else:
+                raise ValueError('unsupported polynomial degree for curveFit class')
+        else: # if kr is none
+            xr = xl + 30
+
+        if kl is None:
+            xl = xr - 30
 
         pix_pos = xl + (xr - xl) / 2
         self.vehicle_position = (pix_pos - mid) * self.kx
@@ -131,6 +157,7 @@ class Curves:
             self.vehicle_position_words = str(np.absolute(np.round(self.vehicle_position*100, 2))) + " cm right of center"
         else:
             self.vehicle_position_words = "at the center"
+
 
     def fit(self, binary):
 
@@ -144,38 +171,41 @@ class Curves:
         for idx_window in range(self.num_windows):
 
             y[0], y[1] = self.next_y(idx_window)  # returns the lowest and highest y coordinates for the window
-            x[0], x[1] = self.next_x(mid_leftx)   # returns the lowest and highest x coordinates for the window on the left
-            x[2], x[3] = self.next_x(mid_rightx)  # returns the lowest and highest x coordinates for the window on the right
+            if mid_leftx is not None :
+                x[0], x[1] = self.next_x(mid_leftx)   # returns the lowest and highest x coordinates for the window on the left
+                self.draw_boundaries((x[0], y[0]), (x[1], y[1]), (255, 0, 0))
+                curr_left_pixels_indices = self.indices_within_boundary(y[0], y[1], x[0], x[1])
+                left_pixels_indices.append(curr_left_pixels_indices)
+                mid_leftx = self.next_midx(mid_leftx, curr_left_pixels_indices)
 
-            self.draw_boundaries((x[0], y[0]), (x[1], y[1]), (255, 0, 0))
-            self.draw_boundaries((x[2], y[0]), (x[3], y[1]), (0, 255, 0))
+            if mid_rightx is not None:
+                x[2], x[3] = self.next_x(mid_rightx)  # returns the lowest and highest x coordinates for the window on the right
+                self.draw_boundaries((x[2], y[0]), (x[3], y[1]), (0, 255, 0))
+                curr_right_pixels_indices = self.indices_within_boundary(y[0], y[1], x[2], x[3])
+                right_pixels_indices.append(curr_right_pixels_indices)
+                mid_rightx = self.next_midx(mid_rightx, curr_right_pixels_indices)
 
-            curr_left_pixels_indices = self.indices_within_boundary(y[0], y[1], x[0], x[1])
-            curr_right_pixels_indices = self.indices_within_boundary(y[0], y[1], x[2], x[3])
+        if len(left_pixels_indices) != 0:
+            self.left_pixels_indices = np.concatenate(left_pixels_indices)
 
-            left_pixels_indices.append(curr_left_pixels_indices)
-            right_pixels_indices.append(curr_right_pixels_indices)
+        if len(right_pixels_indices) != 0:
+            self.right_pixels_indices = np.concatenate(right_pixels_indices)
 
-            mid_leftx = self.next_midx(mid_leftx, curr_left_pixels_indices)
-            mid_rightx = self.next_midx(mid_rightx, curr_right_pixels_indices)
+        # if self.left_pixels_indices.size == 0:
+        #     self.left_pixels_indices = self.right_pixels_indices
+        #
+        # if self.right_pixels_indices.size == 0:
+        #     self.right_pixels_indices = self.left_pixels_indices
 
-        self.left_pixels_indices = np.concatenate(left_pixels_indices)
-        self.right_pixels_indices = np.concatenate(right_pixels_indices)
+        if len(self.left_pixels_indices) != 0 :
+            self.left_pixels_x, self.left_pixels_y = self.pixel_locations(self.left_pixels_indices)
+            self.left_fit_curve_f = self.get_real_curvature(self.left_pixels_x, self.left_pixels_y)
+            self.left_radius = self.radius_of_curvature(self.h * self.ky, self.left_fit_curve_f)
 
-        if self.left_pixels_indices.size == 0:
-            self.left_pixels_indices = self.right_pixels_indices
-
-        if self.right_pixels_indices.size == 0:
-            self.right_pixels_indices = self.left_pixels_indices
-
-        self.left_pixels_x, self.left_pixels_y = self.pixel_locations(self.left_pixels_indices)
-        self.right_pixels_x, self.right_pixels_y = self.pixel_locations(self.right_pixels_indices)
-
-        self.left_fit_curve_f = self.get_real_curvature(self.left_pixels_x, self.left_pixels_y)
-        self.right_fit_curve_f = self.get_real_curvature(self.right_pixels_x, self.right_pixels_y)
-
-        self.left_radius = self.radius_of_curvature(self.h * self.ky, self.left_fit_curve_f)
-        self.right_radius = self.radius_of_curvature(self.h * self.ky, self.right_fit_curve_f)
+        if len(self.right_pixels_indices) != 0:
+            self.right_pixels_x, self.right_pixels_y = self.pixel_locations(self.right_pixels_indices)
+            self.right_fit_curve_f = self.get_real_curvature(self.right_pixels_x, self.right_pixels_y)
+            self.right_radius = self.radius_of_curvature(self.h * self.ky, self.right_fit_curve_f)
 
         self.plot()
         self.update_vehicle_position()
@@ -191,15 +221,17 @@ class Curves:
                     fontScale, fontColor, lineType)
 
         # access the quality of the binary matricies fed
-        y_pixel_range_required = 300
-        poor_binary_quality = False
-        if max(self.left_pixels_y) - min(self.left_pixels_y) < y_pixel_range_required:
-            poor_binary_quality = True
-        if max(self.right_pixels_y) - min(self.right_pixels_y) < y_pixel_range_required:
-            poor_binary_quality = True
-        if np.array_equal(self.left_pixels_y, self.right_pixels_y):
-            poor_binary_quality = True
+        # y_pixel_range_required = 300
+        # poor_binary_quality = False
+        # if max(self.left_pixels_y) - min(self.left_pixels_y) < y_pixel_range_required:
+        #     poor_binary_quality = True
+        # if max(self.right_pixels_y) - min(self.right_pixels_y) < y_pixel_range_required:
+        #     poor_binary_quality = True
+        # if np.array_equal(self.left_pixels_y, self.right_pixels_y):
+        #     poor_binary_quality = True
 
+        self.left_pixels_indices = []
+        self.right_pixels_indices = []
 
         self.result = {
             'image': self.out_img,
@@ -211,7 +243,7 @@ class Curves:
             'pixel_right_best_fit_curve': self.right_fit_curve_pix,
             'vehicle_position': self.vehicle_position,
             'vehicle_position_words': self.vehicle_position_words,
-            'poor_binary_quality': poor_binary_quality
+            'poor_binary_quality': None
         }
 
         return self.result

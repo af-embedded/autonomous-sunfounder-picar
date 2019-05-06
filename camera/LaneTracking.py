@@ -97,7 +97,8 @@ def firstNum(name):
     num = int(name[:-21])
     return num
 
-def process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter, image_folder_path=''):
+
+def process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter):
 
     ### Bird View undistort
     im_skyview = birdsEye.sky_view(lane_image)
@@ -123,13 +124,6 @@ def process_one_frame(lane_image, birdsEye, gradientColorThreshold, curveFitter,
 
     ### Curve fit
     curve_fit_result = curveFitter.fit(b_filtered)
-
-    ### Save images if curve fit raises poor binary quality flag
-    poor_quality = curve_fit_result['poor_binary_quality']
-    if poor_quality:
-        filename_tag = str(datetime.datetime.now()).replace('-', '_').replace(' ', '_').replace(':', '_').replace('.', 'p') + '.jpg'
-        cv2.imwrite(os.path.join(image_folder_path, 'image_' + filename_tag), lane_image)
-        cv2.imwrite(os.path.join(image_folder_path, 'image_skyview_' + filename_tag), im_skyview)
 
     return b_filtered*255, b_color*255, b_sobel*255, im_skyview, curve_fit_result
 
